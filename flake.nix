@@ -11,8 +11,11 @@
           pygame
           pytest
         ])) 
+        (writeShellScriptBin "watch" ''
+          ls **/*.py | ${entr}/bin/entr -cc python -m freshman $@
+        '')
         (writeShellScriptBin "run" ''
-          ls **/*.py | ${entr}/bin/entr sh -c 'clear && python -m rl'
+          python -m freshman $@
         '')
       ];
     };
