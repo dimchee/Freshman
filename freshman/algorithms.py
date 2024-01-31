@@ -68,7 +68,7 @@ def on_policy_mc_slow(env: Env, opts: Parameters) -> Policy:
 def on_policy_mc(env: Env, opts: Parameters) -> Policy:
     q, policy = QValue(), Policy(eps=opts.eps)
     returns = tabular((0.0, int(0)))
-    for ep in opts.progress(range(opts.num_episodes)):
+    for _ in opts.progress(range(opts.num_episodes)):
         ts = policy.trajectory(env)
         G = 0.0
         for s, a, r, first in reversed(tag_first_sa(ts)):

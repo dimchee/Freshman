@@ -15,6 +15,7 @@ from freshman.env import Env, Policy
 
 envs = {
     "lake": {"id": "FrozenLake-v1", "is_slippery": False},
+    "lake_easy": {"id": "FrozenLake-v1", "desc": ["FFFSFFFG"], "is_slippery": False},
     "slippery_lake": {"id": "FrozenLake-v1", "is_slippery": True},
     "cliff": {"id": "CliffWalking-v0"},
 }
@@ -42,7 +43,7 @@ def main(args: list[str]):
                         progress=tqdm,
                     ),
                 )
-            print(freshman.log.pretty(policy))
+            print("Policy: ", freshman.log.pretty(policy))
             with Env(gym_env("human"), seed=4321) as env:
                 for _ in policy.trajectory(env, limit=30):
                     pass
