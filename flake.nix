@@ -11,11 +11,10 @@
           pygame
           pytest
           tqdm
-          decorator
-          moviepy setuptools
+          matplotlib
         ])) 
         (writeShellScriptBin "watch" ''
-          ls **/*.py | ${entr}/bin/entr -cc python -m freshman $@
+          ls **/*.py | ${entr}/bin/entr -rcc python -m freshman $@
         '')
         (writeShellScriptBin "run" ''
           python -m freshman $@
