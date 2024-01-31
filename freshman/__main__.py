@@ -1,7 +1,9 @@
+import random
+import sys
 from typing import Any, Callable
 
 import gymnasium as gym
-import sys
+from tqdm import tqdm
 
 import freshman.algorithms as algs
 import freshman.log
@@ -11,64 +13,47 @@ from freshman.env import Env, Policy
 # TODO Plot Sum of rewards
 
 
-# render_mode = “human”, “rgb_array”, “ansi”
+envs = {
+    "lake": {"id": "FrozenLake-v1", "is_slippery": False},
+    "slippery_lake": {"id": "FrozenLake-v1", "is_slippery": True},
+    "cliff": {"id": "CliffWalking-v0"},
+}
 
 
+# render_mode - “human”, “rgb_array”, “ansi”
 def get_env(env: str) -> Callable[[str], gym.Env[Any, Any]]:
-    match env:
-        case "lake":
-            return lambda render_mode: gym.make(
-                "FrozenLake-v1", render_mode=render_mode, is_slippery=False
-            )
-        case "cliff":
-            return lambda render_mode: gym.make(
-                "CliffWalking-v0", render_mode=render_mode
-            )
-        case _:
-            raise ValueError("env is not recognised")
-
-
-def get_alg(alg: str):
-    match alg:
-        case "q_learning":
-            return algs.q_learning
-        case "double_q_learning":
-            return algs.double_q_learning
-        case "sarsa":
-            return algs.sarsa
-        case "expected_sarsa":
-            return algs.expected_sarsa
-        case _:
-            raise ValueError("alg is not recognised")
+    return lambda render_mode: gym.make(**envs[env], render_mode=render_mode)
 
 
 def main(args: list[str]):
     freshman.log.start()
-    print(args)
+    random.seed(13)
     match args:
         case [env, alg]:
             gym_env = get_env(env)
-            with Env(gym_env("ansi")) as env:
-                policy: Policy = get_alg(alg)(
-                    env, algs.Parameters(num_episodes=1000, eps=0.3, gamma=0.8)
+            print("Training: ")
+            with Env(gym_env("ansi"), seed=1234) as env:
+                policy: Policy = algs.algorithms[alg](
+                    env,
+                    algs.Parameters(
+                        num_episodes=2000,
+                        eps=0.3,
+                        gamma=0.8,
+                        progress=tqdm,
+                    ),
                 )
-            print("Trained")
             print(freshman.log.pretty(policy))
-            with Env(gym_env("human")) as env:
-                for _ in policy.trajectory(env, limit=20):
+            with Env(gym_env("human"), seed=4321) as env:
+                for _ in policy.trajectory(env, limit=30):
                     pass
             print("Finished")
         case _:
             print("Requires exactly 2 arguments: <env> <alg>")
-            print("    <env> is one of `lake`, `cliff`")
+            print(f"    <env> is one of {' '.join('`' + e + '`' for e in envs)}")
             print(
                 "    <alg> is one of",
-                "`q_learning`,",
-                "`double_q_learning`,",
-                "`sarsa`,",
-                "`expected_sarsa`",
+                ("\n" + " " * 20).join("`" + a + "`" for a in algs.algorithms),
             )
-            return
 
 
 main(sys.argv[1:])

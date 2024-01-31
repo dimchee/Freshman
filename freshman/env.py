@@ -24,13 +24,19 @@ def tabular(default: T) -> DefaultDict[State, DefaultDict[Action, T]]:
 @dataclass
 class Env:
     env: gym.Env[Any, Any]
+    seed: int | None
+
+    def __init__(self, env: gym.Env[Any, Any], *, seed: int | None = None):
+        self.env = env
+        self.seed = seed
+        self.env.action_space.seed(seed)
 
     # gym.spaces.flatten(self.env.observation_space, s)  # type: ignore
     # gym.spaces.flatten(self.env.action_space, a)  # type: ignore
     # gym.spaces.unflatten(self.env.action_space, s)
     # gym.spaces.unflatten(self.env.action_space, a)
-    def reset(self, seed: int = 1234) -> State:
-        state, _ = self.env.reset(seed=seed)
+    def reset(self) -> State:
+        state, _ = self.env.reset(seed=self.seed)
         return state
 
     def step(self, a: Action):
@@ -93,9 +99,6 @@ class Policy(DefaultDict[State, DefaultDict[Action, Probability]]):
 
 def greedy(qs: dict[Action, Reward]) -> dict[Action, Probability]:
     return {max(qs, key=qs.get): 1.0} if qs else {}  # type: ignore - pyright
-
-
-Progress = Callable[[int], None]
 
 
 Evaluation = Callable[[Policy], QValue]

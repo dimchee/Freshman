@@ -10,6 +10,7 @@
           pybox2d
           pygame
           pytest
+          tqdm
         ])) 
         (writeShellScriptBin "watch" ''
           ls **/*.py | ${entr}/bin/entr -cc python -m freshman $@
