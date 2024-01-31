@@ -2,6 +2,7 @@ import random
 import sys
 from typing import Any, Callable
 
+# from gymnasium.wrappers.record_video import RecordVideo
 import gymnasium as gym
 from tqdm import tqdm
 
@@ -26,6 +27,16 @@ def get_env(env: str) -> Callable[[str], gym.Env[Any, Any]]:
     return lambda render_mode: gym.make(**envs[env], render_mode=render_mode)
 
 
+# def video(env):
+#     return RecordVideo(
+#         env=env,
+#         video_folder="./docs/gifs",
+#         name_prefix="video",
+#         episode_trigger=lambda x: x % 100 == 1,
+#         disable_logger=True,
+#     )
+
+
 def main(args: list[str]):
     freshman.log.start()
     random.seed(13)
@@ -37,13 +48,13 @@ def main(args: list[str]):
                 policy: Policy = algs.algorithms[alg](
                     env,
                     algs.Parameters(
-                        num_episodes=2000,
+                        num_episodes=1000,
                         eps=0.3,
                         gamma=0.8,
-                        progress=tqdm,
+                        progress=tqdm,  # video_progress(env),
                     ),
                 )
-            print("Policy: ", freshman.log.pretty(policy))
+            # print("Policy: ", freshman.log.pretty(policy))
             with Env(gym_env("human"), seed=4321) as env:
                 for _ in policy.trajectory(env, limit=30):
                     pass

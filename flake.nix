@@ -11,6 +11,8 @@
           pygame
           pytest
           tqdm
+          decorator
+          moviepy setuptools
         ])) 
         (writeShellScriptBin "watch" ''
           ls **/*.py | ${entr}/bin/entr -cc python -m freshman $@

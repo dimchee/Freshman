@@ -59,7 +59,6 @@ def on_policy_mc_slow(env: Env, opts: Parameters) -> Policy:
                 returns[s][a].append(G)
                 q[s][a] = sum(returns[s][a]) / len(returns[s][a])
                 policy[s] = greedy(q[s])
-        # freshman.log.print("q: ", q)
     return policy
 
 
@@ -134,11 +133,10 @@ def q_learning(env: Env, opts: Parameters) -> Policy:
     q, policy = QValue(), Policy(eps=opts.eps)
     for _ in opts.progress(range(opts.num_episodes)):
         for s, a, r, ss, _ in policy.trajectory(env):
-            q[s][a] += opts.alpha * (
-                r + opts.gamma * max(q[ss].values(), default=0) - q[s][a]
-            )
+            # print(f"{s=} {a=} {r=} {ss=}")
+            update_step = r + opts.gamma * max(q[ss].values(), default=0) - q[s][a]
+            q[s][a] += opts.alpha * update_step
             policy[s] = greedy(q[s])
-        # freshman.log.print_traj(ts)
         # freshman.log.print_table("q: ", q)
         # freshman.log.print_table("policy: ", policy)
     return policy.deterministic
@@ -154,8 +152,6 @@ def expected_sarsa(env: Env, opts: Parameters) -> Policy:
             EG = sum((policy[s][a] + policy.eps / nA) * q[s][a] for a in range(nA))
             q[s][a] += opts.alpha * (r + opts.gamma * EG - q[s][a])
             policy[s] = greedy(q[s])
-        # freshman.log.print_table(f"{ep} q: ", q)
-        # freshman.log.print_table(f"{ep} policy: ", policy)
     return policy.deterministic
 
 

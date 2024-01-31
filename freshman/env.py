@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 import gymnasium as gym
+from gymnasium.wrappers.flatten_observation import FlattenObservation
 import freshman.log
 
 
@@ -27,7 +28,7 @@ class Env:
     seed: int | None
 
     def __init__(self, env: gym.Env[Any, Any], *, seed: int | None = None):
-        self.env = env
+        self.env = env  # FlattenObservation(env)
         self.seed = seed
         self.env.action_space.seed(seed)
 
@@ -39,8 +40,9 @@ class Env:
         state, _ = self.env.reset(seed=self.seed)
         return state
 
-    def step(self, a: Action):
-        return self.env.step(a)
+    def step(self, a: Action) -> tuple[State, Reward, bool, bool]:
+        s, r, terminated, truncated, _ = self.env.step(a)
+        return s, r.__float__(), terminated, truncated
 
     def __enter__(self, *_):
         return self
@@ -85,13 +87,12 @@ class Policy(DefaultDict[State, DefaultDict[Action, Probability]]):
             return random.choices(list(self[s].keys()), list(self[s].values()))[0]
 
     def trajectory(self, env: Env, *, limit: int = 1000) -> Trajectory:
-        freshman.log.print_table("trajectory_policy ", self)
         s0 = env.reset()
         a0 = self.sample(env, s0)  # s0 -> a0
         for _ in range(limit):
-            s1, r, terminated, truncated, _ = env.step(a0)  # a0 -> s1
+            s1, r, terminated, truncated = env.step(a0)  # a0 -> s1
             a1 = self.sample(env, s1)  # s1 -> a1
-            yield s0, a0, r.__float__(), s1, a1
+            yield s0, a0, r, s1, a1
             s0, a0 = s1, a1  # restart
             if terminated or truncated:
                 return
