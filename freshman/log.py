@@ -1,13 +1,12 @@
 import logging
 import pprint
-from rl.env import QValue, Policy, Trajectory
 
 
 def start():
     logging.basicConfig(
         level=logging.DEBUG,
         format=" %(asctime)s - %(levelname)s- %(message)s",
-        filename="log",
+        filename="logs/log",
         filemode="w",
     )
 
@@ -46,16 +45,15 @@ def print_traj(x):
     )
 
 
-def print_table(reason: str, what: QValue | Policy):
-    logging.log(
-        logging.DEBUG,
-        reason
-        + "\n"
-        + pprint.pformat(
-            {
-                statify(s): {arrowify(a): f"{p:^6.3f}" for a, p in ap.items()}
-                for s, ap in what.items()
-            },
-            indent=4,
-        ),
+def pretty(what):
+    return pprint.pformat(
+        {
+            statify(s): {arrowify(a): f"{p:^6.3f}" for a, p in ap.items()}
+            for s, ap in what.items()
+        },
+        indent=4,
     )
+
+
+def print_table(reason: str, what):
+    logging.log(logging.DEBUG, reason + "\n" + pretty(what))

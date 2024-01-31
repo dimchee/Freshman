@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 import gymnasium as gym
+import freshman.log
 
 
 State = int
@@ -14,7 +15,6 @@ Probability = float
 Trajectory = Iterator[tuple[State, Action, Reward, State, Action]]
 T = TypeVar("T")
 Tabular = Mapping[State, Mapping[Action, T]]
-HARD_LIMIT: int = 1000
 
 
 def tabular(default: T) -> DefaultDict[State, DefaultDict[Action, T]]:
@@ -29,8 +29,8 @@ class Env:
     # gym.spaces.flatten(self.env.action_space, a)  # type: ignore
     # gym.spaces.unflatten(self.env.action_space, s)
     # gym.spaces.unflatten(self.env.action_space, a)
-    def reset(self) -> State:
-        state, _ = self.env.reset()
+    def reset(self, seed: int = 1234) -> State:
+        state, _ = self.env.reset(seed=seed)
         return state
 
     def step(self, a: Action):
@@ -78,9 +78,11 @@ class Policy(DefaultDict[State, DefaultDict[Action, Probability]]):
         else:
             return random.choices(list(self[s].keys()), list(self[s].values()))[0]
 
-    def trajectory(self, env: Env, s0: State) -> Trajectory:
+    def trajectory(self, env: Env, *, limit: int = 1000) -> Trajectory:
+        freshman.log.print_table("trajectory_policy ", self)
+        s0 = env.reset()
         a0 = self.sample(env, s0)  # s0 -> a0
-        for _ in range(HARD_LIMIT):
+        for _ in range(limit):
             s1, r, terminated, truncated, _ = env.step(a0)  # a0 -> s1
             a1 = self.sample(env, s1)  # s1 -> a1
             yield s0, a0, r.__float__(), s1, a1
@@ -91,6 +93,9 @@ class Policy(DefaultDict[State, DefaultDict[Action, Probability]]):
 
 def greedy(qs: dict[Action, Reward]) -> dict[Action, Probability]:
     return {max(qs, key=qs.get): 1.0} if qs else {}  # type: ignore - pyright
+
+
+Progress = Callable[[int], None]
 
 
 Evaluation = Callable[[Policy], QValue]
