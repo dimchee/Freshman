@@ -5,9 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 import gymnasium as gym
-from gymnasium.wrappers.flatten_observation import FlattenObservation
-import freshman.log
-
+# import freshman.log
 
 State = int
 Action = int
@@ -104,3 +102,4 @@ def greedy(qs: dict[Action, Reward]) -> dict[Action, Probability]:
 
 Evaluation = Callable[[Policy], QValue]
 Improvement = Callable[[QValue], Policy]
+EnvMaker = Callable[[str], Env]

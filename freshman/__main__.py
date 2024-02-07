@@ -1,16 +1,15 @@
 import random
-from typing import Callable, Optional, Iterable
-import sys
+from typing import Annotated, Optional
 
-# from gymnasium.wrappers.record_video import RecordVideo
 import gymnasium as gym
-import matplotlib.animation as ani
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 import freshman.algorithms as algs
+from freshman.algorithms import Algorithm, Parameters
 import freshman.log
-from freshman.env import Env, Policy
+from freshman.env import Env, Policy, EnvMaker
+import freshman.graphics as graphics
+import arguably
 
 # TODO add tests
 # TODO Plot Sum of rewards
@@ -24,9 +23,6 @@ envs = {
 }
 
 
-EnvMaker = Callable[[str], Env]
-
-
 # render_mode - “human”, “rgb_array”, “ansi”
 def get_env(env: str, *, seed: Optional[int] = None) -> EnvMaker:
     return lambda render_mode: Env(
@@ -34,70 +30,48 @@ def get_env(env: str, *, seed: Optional[int] = None) -> EnvMaker:
     )
 
 
-# Needs ffmpeg
-def video(
-    em: EnvMaker,
-    policy: Policy,
-    file_name: str,
-    *,
-    fps: int = 1,
-    title: str = "",
-    limit: int = 30,
-    dpi: int = 100,
-):
-    with em("rgb_array") as env:
-        _, first = env.reset(), env.env.render()
-        height, width, _ = first.shape  # type: ignore
-        fig, ax = plt.subplots(figsize=(width / dpi, height / dpi))
-        # no extra white space
-        fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=None, hspace=None)
-        writer = ani.writers["ffmpeg"](fps=fps, metadata={"title": title})
-        with writer.saving(fig, "docs/video/" + file_name, dpi=dpi):
-            im = ax.imshow(first, interpolation="nearest")
-            writer.grab_frame()
-            for img in (env.env.render() for _ in policy.trajectory(env, limit=limit)):
-                im.set_data(img)
-                writer.grab_frame()
-
-
-def run(env_name: str, alg_name: str):
-    env_maker = get_env(env_name, seed=1234)
-    print("Training: ")
+def train(env_maker: EnvMaker, params: Parameters, alg: Algorithm) -> Policy:
     with env_maker("ansi") as env:
-        policy: Policy = algs.algorithms[alg_name](
-            env,
-            algs.Parameters(
-                num_episodes=1000,
-                eps=0.3,
-                gamma=0.8,
-                progress=tqdm,  # video_progress(env),
-            ),
-        )
-    video(env_maker, policy, f"{env_name}-{alg_name}.mp4")
-    # print("Policy: ", freshman.log.pretty(policy))
-    # with Env(env_maker("human"), seed=4321) as env:
-    #     for _ in policy.trajectory(env, limit=30):
-    #         pass
-    print("Finished")
+        p = alg(env, params)
+        print(p)
+        return p
 
 
-def padded(strs: Iterable[str], padding: int):
-    return ("\n" + " " * padding).join("`" + s + "`" for s in strs)
+def show_policy(env_maker: EnvMaker, policy: Policy):
+    with env_maker("human") as env:
+        for _ in policy.trajectory(env, limit=30):
+            pass
 
 
-usage = f"""Requires exactly 2 arguments: <env> <alg>
-    <env> is one of {padded(envs.keys(), 20)}
-    <alg> is one of {padded(algs.algorithms.keys(), 20)}"""
+def generate_video(env_maker: EnvMaker, policy: Policy, name: str):
+    graphics.video(env_maker, policy, f"{name}.gif")
 
 
-def main(args: list[str]):
+@arguably.command
+def run(
+    env: Annotated[str, arguably.arg.choices(*envs.keys())],
+    alg: Annotated[str, arguably.arg.choices(*algs.algorithms.keys())],
+    *,
+    show: bool = False,
+    video: bool = False,
+):
+    env_maker = get_env(env, seed=12346)  # 1234
+    print("Training: ")
+    policy: Policy = train(
+        env_maker,
+        algs.Parameters(num_episodes=1000, eps=0.2, gamma=0.9, progress=tqdm),
+        algs.algorithms[alg],
+    )
+    if show:
+        show_policy(env_maker, policy)
+    if video:
+        generate_video(env_maker, policy, f"{env}-{alg}")
+
+
+def main():
     freshman.log.start()
     random.seed(13)
-    match args:
-        case [env, alg]:
-            run(env, alg)
-        case _:
-            print(usage)
+    arguably.run(name="freshman")
 
 
-main(sys.argv[1:])
+main()

@@ -44,11 +44,3 @@ https://github.com/dimchee/Freshman/assets/41148612/d42b64a0-d6e5-4387-85a2-1523
 - Lake-slippery Expected-sarsa
   
 https://github.com/dimchee/Freshman/assets/41148612/8c82f94f-0705-4a2e-b45e-5e2cf0878152
-
-
-
-
-
-
-
-
