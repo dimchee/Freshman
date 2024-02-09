@@ -1,15 +1,16 @@
 import random
-from typing import Annotated, Optional
+from typing import Annotated, Iterable, Optional
 
+import arguably
 import gymnasium as gym
+from matplotlib.animation import PillowWriter
 from tqdm import tqdm
 
 import freshman.algorithms as algs
-from freshman.algorithms import Algorithm, Parameters
-import freshman.log
-from freshman.env import Env, Policy, EnvMaker
 import freshman.graphics as graphics
-import arguably
+import freshman.log
+from freshman.algorithms import Algorithm, Parameters
+from freshman.env import Action, Env, EnvMaker, Policy, QValue, Reward, State
 
 # TODO add tests
 # TODO Plot Sum of rewards
@@ -25,6 +26,7 @@ envs = {
 
 # render_mode - “human”, “rgb_array”, “ansi”
 def get_env(env: str, *, seed: Optional[int] = None) -> EnvMaker:
+    random.seed(seed)
     return lambda render_mode: Env(
         gym.make(**envs[env], render_mode=render_mode), seed=seed
     )
@@ -32,9 +34,8 @@ def get_env(env: str, *, seed: Optional[int] = None) -> EnvMaker:
 
 def train(env_maker: EnvMaker, params: Parameters, alg: Algorithm) -> Policy:
     with env_maker("ansi") as env:
-        p = alg(env, params)
-        print(p)
-        return p
+        policy, _ = alg(env, params)
+        return policy
 
 
 def show_policy(env_maker: EnvMaker, policy: Policy):
@@ -59,7 +60,7 @@ def run(
     print("Training: ")
     policy: Policy = train(
         env_maker,
-        algs.Parameters(num_episodes=1000, eps=0.2, gamma=0.9, progress=tqdm),
+        algs.Parameters(num_episodes=1000, eps=0.2, gamma=0.9, episodic_progress=tqdm),
         algs.algorithms[alg],
     )
     if show:
@@ -70,8 +71,67 @@ def run(
 
 def main():
     freshman.log.start()
-    random.seed(13)
     arguably.run(name="freshman")
 
 
-main()
+# main()
+
+
+def collect_rewards():
+    rws: list[Reward] = []
+
+    def f(xs: Iterable[tuple[State, Action, Reward, State, Action]]):
+        for x in xs:
+            _, _, r, _, _ = x
+            rws.append(r)
+            # print(f"{r=}")
+            yield x
+
+    return f, rws
+
+
+def visual_training(env: Env, q: QValue):
+    rws: list[Reward] = []
+
+    def f(xs: Iterable[tuple[State, Action, Reward, State, Action]]):
+        for x in xs:
+            _, _, r, _, _ = x
+            rws.append(r)
+            graphics.plot(env, q, show=True, rewards=rws)
+            # print(f"{r=}")
+            yield x
+
+    return f
+
+
+env_maker = get_env("lake", seed=1234)  # 1234
+print("Training: ")
+policy: Policy
+q: QValue
+with env_maker("rgb_array") as env:
+    alg = algs.algorithms["q_learning"]
+    q, policy = QValue(), Policy(eps=0.2)
+    # t_progress, rws = collect_rewards()
+    policy, q = alg(
+        env,
+        algs.Parameters(
+            num_episodes=1000,
+            eps=0.2,
+            gamma=0.9,
+            episodic_progress=tqdm,
+            q=q,
+            # progress=t_progress,
+        ),
+    )
+    with graphics.TrainingVideo(name="training", format="mp4") as vid:
+        policy, q = alg(
+            env,
+            algs.Parameters(
+                num_episodes=100,
+                eps=0.2,
+                gamma=0.9,
+                episodic_progress=tqdm,
+                q=q,
+                progress=vid.step(env, q),
+            ),
+        )

@@ -10,6 +10,7 @@ import gymnasium as gym
 State = int
 Action = int
 Reward = float
+SARSA = tuple[State, Action, Reward, State, Action]
 Probability = float
 Trajectory = Iterator[tuple[State, Action, Reward, State, Action]]
 T = TypeVar("T")
