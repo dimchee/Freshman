@@ -3,7 +3,6 @@ from typing import Annotated, Iterable, Optional
 
 import arguably
 import gymnasium as gym
-from matplotlib.animation import PillowWriter
 from tqdm import tqdm
 
 import freshman.algorithms as algs
@@ -27,7 +26,7 @@ envs = {
 # render_mode - “human”, “rgb_array”, “ansi”
 def get_env(env: str, *, seed: Optional[int] = None) -> EnvMaker:
     random.seed(seed)
-    return lambda render_mode: Env(
+    return lambda render_mode="ansi": Env(
         gym.make(**envs[env], render_mode=render_mode), seed=seed
     )
 
@@ -44,10 +43,6 @@ def show_policy(env_maker: EnvMaker, policy: Policy):
             pass
 
 
-def generate_video(env_maker: EnvMaker, policy: Policy, name: str):
-    graphics.video(env_maker, policy, f"{name}.gif")
-
-
 @arguably.command
 def run(
     env: Annotated[str, arguably.arg.choices(*envs.keys())],
@@ -60,13 +55,19 @@ def run(
     print("Training: ")
     policy: Policy = train(
         env_maker,
-        algs.Parameters(num_episodes=1000, eps=0.2, gamma=0.9, episodic_progress=tqdm),
+        algs.Parameters(
+            num_episodes=1000,
+            eps=0.2,
+            gamma=0.9,
+            episodic_progress=lambda x, *_: tqdm(x),
+        ),
         algs.algorithms[alg],
     )
     if show:
         show_policy(env_maker, policy)
     if video:
-        generate_video(env_maker, policy, f"{env}-{alg}")
+        pass
+        # generate_video(env_maker, policy, f"{env}-{alg}")
 
 
 def main():
@@ -80,7 +81,7 @@ def main():
 def collect_rewards():
     rws: list[Reward] = []
 
-    def f(xs: Iterable[tuple[State, Action, Reward, State, Action]]):
+    def f(xs: Iterable[tuple[State, Action, Reward, State, Action]], *_):
         for x in xs:
             _, _, r, _, _ = x
             rws.append(r)
@@ -108,30 +109,21 @@ env_maker = get_env("lake", seed=1234)  # 1234
 print("Training: ")
 policy: Policy
 q: QValue
-with env_maker("rgb_array") as env:
+with env_maker("ansi") as env:
     alg = algs.algorithms["q_learning"]
     q, policy = QValue(), Policy(eps=0.2)
-    # t_progress, rws = collect_rewards()
+    t_progress, rws = collect_rewards()
     policy, q = alg(
         env,
         algs.Parameters(
-            num_episodes=1000,
+            num_episodes=2000,
             eps=0.2,
             gamma=0.9,
-            episodic_progress=tqdm,
+            episodic_progress=lambda x, *_: tqdm(x),
             q=q,
-            # progress=t_progress,
+            progress=t_progress,
         ),
     )
-    with graphics.TrainingVideo(name="training", format="mp4") as vid:
-        policy, q = alg(
-            env,
-            algs.Parameters(
-                num_episodes=100,
-                eps=0.2,
-                gamma=0.9,
-                episodic_progress=tqdm,
-                q=q,
-                progress=vid.step(env, q),
-            ),
-        )
+    # graphics.plot(env, q, show=True)
+with graphics.TrainingVideo(name="training", format="gif", rws=rws) as vid:
+    vid.record_episode(env_maker, policy, q)

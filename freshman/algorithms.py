@@ -17,7 +17,7 @@ from freshman.env import (
 
 
 T = TypeVar("T")
-Progress = Callable[[Iterable[T]], Iterable[T]]
+Progress = Callable[[Iterable[T], Policy, QValue], Iterable[T]]
 
 
 @dataclass(kw_only=True)
@@ -26,8 +26,8 @@ class Parameters:
     gamma: float = 0.9
     eps: float = 0.1
     alpha: float = 0.9
-    episodic_progress: Progress = lambda x: x  # noqa: E731
-    progress: Progress = lambda x: x  # noqa: E731
+    episodic_progress: Progress = lambda x, *_: x  # noqa: E731
+    progress: Progress = lambda x, *_: x  # noqa: E731
     q: QValue = field(default_factory=QValue)
     policy: Policy = field(default_factory=Policy)
 
@@ -35,10 +35,10 @@ class Parameters:
         self.policy.eps = self.eps
 
     def trajectory(self, policy: Policy, env: Env) -> Trajectory:
-        return self.progress(policy.trajectory(env))  # type: ignore
+        return self.progress(policy.trajectory(env), self.policy, self.q)  # type: ignore
 
     def episodes(self):
-        return self.episodic_progress(range(self.num_episodes))
+        return self.episodic_progress(range(self.num_episodes), self.policy, self.q)
 
 
 Algorithm = Callable[[Env, Parameters], tuple[Policy, QValue]]
@@ -147,12 +147,9 @@ def q_learning(env: Env, opts: Parameters) -> tuple[Policy, QValue]:
     q, policy = opts.q, opts.policy
     for _ in opts.episodes():
         for s, a, r, ss, _ in opts.trajectory(policy, env):
-            # print(f"{s=} {a=} {r=} {ss=}")
             update_step = r + opts.gamma * max(q[ss].values(), default=0) - q[s][a]
             q[s][a] += opts.alpha * update_step
             policy[s] = greedy(q[s])
-        # freshman.log.print_table("q: ", q)
-        # freshman.log.print_table("policy: ", policy)
     return policy.deterministic, q
 
 
