@@ -1,5 +1,7 @@
 # Freshman 
 
+# ⚠ Currently working on full rewrite
+
 These are my first steps wandering around the famous 
 [Farama](https://farama.org/) [Gymnasium](https://gymnasium.farama.org/).
 

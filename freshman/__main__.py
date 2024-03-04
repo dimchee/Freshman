@@ -1,19 +1,10 @@
-import random
-from typing import Annotated, Iterable, Optional
-
 import arguably
 import gymnasium as gym
-from tqdm import tqdm
+import random
 
-import freshman.algorithms as algs
-import freshman.graphics as graphics
-import freshman.log
-from freshman.algorithms import Algorithm, Parameters
-from freshman.env import Action, Env, EnvMaker, Policy, QValue, Reward, State
-
-# TODO add tests
-# TODO Plot Sum of rewards
-
+from typing import Any, Optional, Annotated
+from enum import StrEnum
+from dataclasses import dataclass
 
 envs = {
     "lake": {"id": "FrozenLake-v1", "is_slippery": False},
@@ -23,107 +14,70 @@ envs = {
 }
 
 
-# render_mode - “human”, “rgb_array”, “ansi”
-def get_env(env: str, *, seed: Optional[int] = None) -> EnvMaker:
-    random.seed(seed)
-    return lambda render_mode="ansi": Env(
-        gym.make(**envs[env], render_mode=render_mode), seed=seed
-    )
+State = int
+Action = int
+Reward = float
 
 
-def train(env_maker: EnvMaker, params: Parameters, alg: Algorithm) -> Policy:
-    with env_maker("ansi") as env:
-        policy, _ = alg(env, params)
-        return policy
+@dataclass
+class Env:
+    env: gym.Env[Any, Any]
+    seed: int | None
+
+    def __post_init__(self):
+        self.env.action_space.seed(self.seed)
+
+    # # gym.spaces.flatten(self.env.observation_space, s)  # type: ignore
+    # # gym.spaces.flatten(self.env.action_space, a)  # type: ignore
+    # # gym.spaces.unflatten(self.env.action_space, s)
+    # # gym.spaces.unflatten(self.env.action_space, a)
+    def reset(self) -> State:
+        state, _ = self.env.reset(seed=self.seed)
+        return state
+
+    def step(self, a: Action) -> tuple[State, Reward, bool, bool]:
+        s, r, terminated, truncated, _ = self.env.step(a)
+        return s, r.__float__(), terminated, truncated
+
+    #
+    def __enter__(self, *_):
+        return self
+
+    def __exit__(self, *_):
+        self.env.close()
 
 
-def show_policy(env_maker: EnvMaker, policy: Policy):
-    with env_maker("human") as env:
-        for _ in policy.trajectory(env, limit=30):
-            pass
+class RenderMode(StrEnum):
+    HUMAN = "human"
+    RGB_ARRAY = "rgb_array"
+    ANSI = "ansi"
+
+
+@dataclass
+class EnvMaker:
+    env_name: str
+    seed: Optional[int] = None
+
+    def get(self, render_mode: RenderMode):
+        random.seed(self.seed)
+        return Env(
+            gym.make(**envs[self.env_name], render_mode=render_mode), seed=self.seed
+        )
 
 
 @arguably.command
-def run(
-    env: Annotated[str, arguably.arg.choices(*envs.keys())],
-    alg: Annotated[str, arguably.arg.choices(*algs.algorithms.keys())],
-    *,
-    show: bool = False,
-    video: bool = False,
-):
-    env_maker = get_env(env, seed=12346)  # 1234
-    print("Training: ")
-    policy: Policy = train(
-        env_maker,
-        algs.Parameters(
-            num_episodes=1000,
-            eps=0.2,
-            gamma=0.9,
-            episodic_progress=lambda x, *_: tqdm(x),
-        ),
-        algs.algorithms[alg],
-    )
-    if show:
-        show_policy(env_maker, policy)
-    if video:
-        pass
-        # generate_video(env_maker, policy, f"{env}-{alg}")
+def run(environment: Annotated[str, arguably.arg.choices(*envs.keys())]) -> None:
+    print(f"Running {environment}")
+    maker = EnvMaker(environment)
+    with maker.get(RenderMode.HUMAN) as env:
+        env.reset()
+        env.step(1)
+        env.step(1)
+        env.step(2)
+        env.step(1)
+        env.step(2)
+        env.step(2)
 
 
-def main():
-    freshman.log.start()
+if __name__ == "__main__":
     arguably.run(name="freshman")
-
-
-# main()
-
-
-def collect_rewards():
-    rws: list[Reward] = []
-
-    def f(xs: Iterable[tuple[State, Action, Reward, State, Action]], *_):
-        for x in xs:
-            _, _, r, _, _ = x
-            rws.append(r)
-            # print(f"{r=}")
-            yield x
-
-    return f, rws
-
-
-def visual_training(env: Env, q: QValue):
-    rws: list[Reward] = []
-
-    def f(xs: Iterable[tuple[State, Action, Reward, State, Action]]):
-        for x in xs:
-            _, _, r, _, _ = x
-            rws.append(r)
-            graphics.plot(env, q, show=True, rewards=rws)
-            # print(f"{r=}")
-            yield x
-
-    return f
-
-
-env_maker = get_env("lake", seed=1234)  # 1234
-print("Training: ")
-policy: Policy
-q: QValue
-with env_maker("ansi") as env:
-    alg = algs.algorithms["q_learning"]
-    q, policy = QValue(), Policy(eps=0.2)
-    t_progress, rws = collect_rewards()
-    policy, q = alg(
-        env,
-        algs.Parameters(
-            num_episodes=2000,
-            eps=0.2,
-            gamma=0.9,
-            episodic_progress=lambda x, *_: tqdm(x),
-            q=q,
-            progress=t_progress,
-        ),
-    )
-    # graphics.plot(env, q, show=True)
-with graphics.TrainingVideo(name="training", format="gif", rws=rws) as vid:
-    vid.record_episode(env_maker, policy, q)
