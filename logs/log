@@ -1,5 +1,0 @@
- 2024-02-08 23:32:43,508 - DEBUG- Initializing '__root__' parser: ArgumentParser(prog='freshman', description='', formatter_class=<bound method _Context._formatter of <arguably._context._Context object at 0x7f313bcc4950>>, add_help=True, output=None)
- 2024-02-08 23:32:43,509 - DEBUG- Parser('__root__').add_argument('env', type=<class 'str'>, action='store', help='(type: str)', choices=('lake', 'lake_easy', 'lake_slippery', 'cliff'))
- 2024-02-08 23:32:43,509 - DEBUG- Parser('__root__').add_argument('alg', type=<class 'str'>, action='store', help='(type: str)', choices=('on_policy_mc_slow', 'on_policy_mc', 'off_policy_mc', 'constant_alpha_mc', 'sarsa', 'q_learning', 'expected_sarsa', 'double_q_learning'))
- 2024-02-08 23:32:43,509 - DEBUG- Parser('__root__').add_argument('--show', action='store_true', default=False, dest='show', help='(type: bool, default: False)')
- 2024-02-08 23:32:43,510 - DEBUG- Parser('__root__').add_argument('--video', action='store_true', default=False, dest='video', help='(type: bool, default: False)')

@@ -6,7 +6,7 @@ import gymnasium as gym
 from dataclasses import dataclass, field
 
 # import freshman.log
-from freshman.env import (
+from freshman_old.env import (
     Env,
     Policy,
     QValue,

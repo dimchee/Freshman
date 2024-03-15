@@ -1,24 +1,26 @@
+import gymnasium as gym
 import random
-from typing import Any, Callable, DefaultDict, Iterator, TypeVar
-from collections import defaultdict
+
+from typing import Any, Optional, DefaultDict, TypeVar, Iterator
 from collections.abc import Mapping
+from collections import defaultdict
+from enum import StrEnum
 from dataclasses import dataclass
 
-import gymnasium as gym
-# import freshman.log
+envs = {
+    "lake": {"id": "FrozenLake-v1", "is_slippery": False},
+    "lake_easy": {"id": "FrozenLake-v1", "desc": ["FFFSFFFG"], "is_slippery": False},
+    "lake_slippery": {"id": "FrozenLake-v1", "is_slippery": True},
+    "cliff": {"id": "CliffWalking-v0"},
+}
+
 
 State = int
 Action = int
 Reward = float
-SARSA = tuple[State, Action, Reward, State, Action]
 Probability = float
-Trajectory = Iterator[tuple[State, Action, Reward, State, Action]]
-T = TypeVar("T")
-Tabular = Mapping[State, Mapping[Action, T]]
-
-
-def tabular(default: T) -> DefaultDict[State, DefaultDict[Action, T]]:
-    return defaultdict(lambda: defaultdict(lambda: default))
+Sarsa = tuple[State, Action, Reward, State, Action]
+Trajectory = Iterator[Sarsa]
 
 
 @dataclass
@@ -26,15 +28,10 @@ class Env:
     env: gym.Env[Any, Any]
     seed: int | None
 
-    def __init__(self, env: gym.Env[Any, Any], *, seed: int | None = None):
-        self.env = env  # FlattenObservation(env)
-        self.seed = seed
-        self.env.action_space.seed(seed)
+    def __post_init__(self):
+        self.env.action_space.seed(self.seed)
+        self.reset()
 
-    # gym.spaces.flatten(self.env.observation_space, s)  # type: ignore
-    # gym.spaces.flatten(self.env.action_space, a)  # type: ignore
-    # gym.spaces.unflatten(self.env.action_space, s)
-    # gym.spaces.unflatten(self.env.action_space, a)
     def reset(self) -> State:
         state, _ = self.env.reset(seed=self.seed)
         return state
@@ -50,12 +47,39 @@ class Env:
         self.env.close()
 
 
+class RenderMode(StrEnum):
+    HUMAN = "human"
+    RGB_ARRAY = "rgb_array"
+    ANSI = "ansi"
+
+
+@dataclass
+class EnvMaker:
+    env_name: str
+    seed: Optional[int] = None
+
+    def get(self, render_mode: RenderMode):
+        random.seed(self.seed)
+        return Env(
+            gym.make(**envs[self.env_name], render_mode=render_mode), seed=self.seed
+        )
+
+
+U = TypeVar("U")
+T = TypeVar("T")
+Tabular = Mapping[State, Mapping[Action, T]]
+
+
+def tabular(default: T, dict: Mapping[U, T] = {}) -> DefaultDict[U, T]:
+    return defaultdict(lambda: default, dict)
+
+
 @dataclass
 class QValue(DefaultDict[State, DefaultDict[Action, Reward]]):
     def __init__(self, default: float = 0, dict: Tabular[Reward] = {}):
         super().__init__(
-            lambda: defaultdict(lambda: default),
-            ((s, defaultdict(lambda: default, ap)) for s, ap in dict.items()),
+            lambda: tabular(default),
+            ((s, tabular(default, ap)) for s, ap in dict.items()),
         )
 
 
@@ -93,12 +117,3 @@ class Policy(DefaultDict[State, DefaultDict[Action, Probability]]):
             s0, a0 = s1, a1  # restart
             if terminated or truncated:
                 return
-
-
-def greedy(qs: dict[Action, Reward]) -> dict[Action, Probability]:
-    return {max(qs, key=qs.get): 1.0} if qs else {}  # type: ignore - pyright
-
-
-Evaluation = Callable[[Policy], QValue]
-Improvement = Callable[[QValue], Policy]
-EnvMaker = Callable[[str], Env]
