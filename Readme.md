@@ -24,25 +24,11 @@ nix develop
 run lake q_learning
 ```
 
-# Demos
-- Cliff Double-Q-Learning
+# Literature
 
-https://github.com/dimchee/Freshman/assets/41148612/8cc6a117-5050-4971-9499-4d7c850a0589
-- Cliff Sarsa
-  
-https://github.com/dimchee/Freshman/assets/41148612/a7ae03bb-59d3-4c06-9558-dd821f56696f
-- Lake Q-Learning
-  
-https://github.com/dimchee/Freshman/assets/41148612/456cbd53-fcdf-43f8-af20-17e9479a8c9d
-- Lake-slippery Q-Learning
-  
-https://github.com/dimchee/Freshman/assets/41148612/7f7d7c2c-c51a-4bb3-815a-5f3e5856be9a
-- Lake-slippery Double-Q-Learning
-  
-https://github.com/dimchee/Freshman/assets/41148612/cc196641-d47b-4620-8c47-0ae4a13b91fd
-- Lake-slippery Sarsa
-  
-https://github.com/dimchee/Freshman/assets/41148612/d42b64a0-d6e5-4387-85a2-1523ae0bd4c9
-- Lake-slippery Expected-sarsa
-  
-https://github.com/dimchee/Freshman/assets/41148612/8c82f94f-0705-4a2e-b45e-5e2cf0878152
+- [Main book](https://www.mit.edu/%7Edimitrib/RLCOURSECOMPLETE%202ndEDITION.pdf)
+- [Nice Cheat Sheet](https://reinforcement-learning-math.readthedocs.io/en/latest/index.html)
+- [Material](https://www.mit.edu/%7Edimitrib/RLbook.html)
+- [State of the art](https://hunch.net/~tforl/)
+- <https://math.stackexchange.com/questions/4542269/mathematical-foundations-of-reinforcement-learning>
+- [YT course](https://github.com/MathFoundationRL/Book-Mathematical-Foundation-of-Reinforcement-Learning)
